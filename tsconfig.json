@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "ESNext"],
+    "module": "Node16",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+
+    /* Module Resolution Options */
+    "moduleResolution": "Node16",
+    "moduleDetection": "force",
+    "allowJs": true,
+    "allowArbitraryExtensions": true,
+    "verbatimModuleSyntax": true,
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/middlewares": ["middlewares/*"],
+      "@/helpers": ["helpers/*"],
+      "@/models": ["models/*"],
+      "@/routes": ["routes/*"],
+    },
+
+    /* linting  settings */
+    "strictNullChecks": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+		"removeComments": true,
+		"allowSyntheticDefaultImports": true,
+		"downlevelIteration": true,
+
+    /* Advanced Options */
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+    "lib": ["es2015"],
+    "include": ["src/**/*", "src/server.ts", "src/routes/auth.ts"],
+    "exclude": ["node_modules"]
+}
