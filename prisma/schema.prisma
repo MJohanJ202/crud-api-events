@@ -24,8 +24,11 @@ model Event {
   updatedAt DateTime @updatedAt
 
   participant Participant[]
+
+  @@unique([name, date])
   @@map("Events")
 }
+
 
 model Participant {
   id String @id @default(uuid())

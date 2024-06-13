@@ -1,19 +1,20 @@
 import { z } from 'zod'
 import { mergeWithSearchSchema } from './general.js'
 
-const eventSchema = z.object({
+export const eventSchema = z.object({
   name: z.string().min(1).max(100),
-  date: z.date().refine(date => date >= new Date(), {
+  date: z.string().datetime().refine(date => new Date(date) >= new Date(), {
     message: 'Date must be in the future'
   }),
   location: z.string().max(200).optional(),
   description: z.string().max(1000).optional()
 })
 
-const searchEventByParamsSchema = mergeWithSearchSchema(eventSchema)
+const searchEventByParamsSchema = mergeWithSearchSchema(eventSchema.partial())
 
 export type EventSchema = z.infer<typeof eventSchema>
 export type PartialEventSchema = Partial<EventSchema>
+export type SearchOneEventByParams = PartialEventSchema & { id?: string }
 export type SearchEventByParams = z.infer<typeof searchEventByParamsSchema>
 
 export const validateEventInfo = (shape: unknown) => {

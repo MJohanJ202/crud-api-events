@@ -1,6 +1,11 @@
 import { HTTPClientError } from '@/helpers/HTTP/ClientError.js'
 import { isEmptyObject } from '@/helpers/general/objectUtils.js'
-import type { EventSchema, PartialEventSchema, SearchEventByParams } from '@/schemas/event.js'
+import type {
+  EventSchema,
+  PartialEventSchema,
+  SearchEventByParams,
+  SearchOneEventByParams
+} from '@/schemas/event.js'
 import { connectClient } from '../utils/clientDB.js'
 
 export class EventsModel {
@@ -8,15 +13,34 @@ export class EventsModel {
 
   private async checkId ({ id }: { id: string }) {
     const existEvent = await EventsModel.exist({ id })
-    if (existEvent === null) return null
-    const message = 'id not exist'
-    const errors = ['the event with id not exist']
-    throw HTTPClientError.notFound({ message, path: '/events', name: 'eventNotFound', errors })
+    if (existEvent) return null
+    throw HTTPClientError.notFound({
+      message: 'id not exist',
+      path: '/events',
+      name: 'eventNotFound',
+      errors: ['the event with id not exist']
+    })
   }
 
   static async findOneById ({ id }: { id: string }) {
     const client = await this.database
-    const event = await client.event.findFirst({ where: { id } })
+    const event = await client.event.findUnique({ where: { id } })
+    return event
+  }
+
+  static async findOne ({ query }: { query: SearchOneEventByParams }) {
+    const client = await this.database
+    const { name, date } = query
+    const findByCompositeIndex = typeof name !== 'undefined' &&
+      typeof date !== 'undefined'
+    if (findByCompositeIndex) {
+      const event = await client.event
+        .findUnique({ where: { name_date: { name, date } } })
+      return event
+    }
+
+    const event = await client.event
+      .findFirst({ where: { ...query } })
     return event
   }
 
@@ -41,6 +65,17 @@ export class EventsModel {
   static async createOne ({ shape }: { shape: unknown }) {
     const client = await this.database
     const { name, date, location, description } = shape as EventSchema
+    const existEvent = await EventsModel.findOne({ query: { name, date } })
+
+    if (existEvent !== null) {
+      throw HTTPClientError.badRequest({
+        message: 'event already recorded',
+        path: '/events',
+        name: 'eventExist',
+        errors: ['such an event already exists']
+      })
+    }
+
     const newEvent = await client.event.create({
       data: {
         name,
@@ -62,7 +97,10 @@ export class EventsModel {
       .update({
         where: { id },
         data: {
-          name, location, date, description
+          name,
+          location,
+          date,
+          description
         }
       })
     return event
@@ -87,6 +125,6 @@ export class EventsModel {
     })
 
     const results = await client.event.findFirst({ where: { OR: conditions } })
-    return Boolean(results?.email)
+    return Boolean(results?.name)
   }
 }

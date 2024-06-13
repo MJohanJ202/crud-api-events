@@ -21,20 +21,18 @@ export class EventController {
   static getOneById = async (req: Request, res: Response) => {
     const { params } = req
     const { id } = params
-
     const findEvent = await EventsModel.findOneById({ id })
-    const NAME_EVENT = 'name'
-    if (!(NAME_EVENT in findEvent)) {
+
+    if (findEvent === null) {
       const errorResponseHandler = new HTTPResponseError({ res })
-      const errors = ['The event resource was not found']
       errorResponseHandler.notFound({
         res,
-        message: 'event exist',
+        message: 'event not exist',
         path: req.originalUrl,
         name: 'NotFoundError',
-        errors
+        errors: ['The event resource was not found']
       })
-      return null
+      return
     }
 
     const responseHandler = new HTTPResponse({ res })
@@ -53,7 +51,7 @@ export class EventController {
     const { id } = params
     const responseHandler = new HTTPResponse({ res })
     const findEvent = await EventsModel.updateOneById({ id, shape })
-    responseHandler.created({ res, data: findEvent })
+    responseHandler.ok({ res, data: findEvent })
   }
 
   static deleteOneById = async (req: Request, res: Response) => {
@@ -61,6 +59,9 @@ export class EventController {
     const { id } = params
     const responseHandler = new HTTPResponse({ res })
     await EventsModel.deleteOneById({ id })
-    responseHandler.noContent({ res, message: 'event is eliminated successfully' })
+    responseHandler.noContent({
+      res,
+      message: 'event is eliminated successfully'
+    })
   }
 }

@@ -11,6 +11,9 @@ export function handleHTTPError (
   next: NextFunction
 ) {
   const errorResponseHandler = new HTTPResponseError({ res })
+
+  // console.log(error)
+
   if (error instanceof HTTPClientError) {
     const errorClient = error.toJson()
     const response = { res, ...errorClient }

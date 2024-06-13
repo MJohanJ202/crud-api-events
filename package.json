@@ -13,7 +13,8 @@
     "express",
     "bun",
     "ts-node",
-    "crud"
+    "crud",
+    "api rest"
   ],
   "author": "J@mj202",
   "license": "ISC",
