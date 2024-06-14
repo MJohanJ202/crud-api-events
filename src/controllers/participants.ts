@@ -1,5 +1,6 @@
 import { HTTPResponse } from '@/helpers/HTTP/ResponseClient.js'
 import { HTTPResponseError } from '@/helpers/HTTP/ResponseClientError.js'
+import { isEmpty } from '@/helpers/general/validateTypes.js'
 import { ParticipantsModel } from '@/models/schemas/participants.js'
 import type { EventSchema } from '@/schemas/event.js'
 import type { Request, Response } from 'express'
@@ -23,7 +24,7 @@ export class ParticipantController {
     const { id } = params
 
     const findParticipant = await ParticipantsModel.findOneById({ id })
-    if (findParticipant === null) {
+    if (isEmpty(findParticipant)) {
       const errorResponseHandler = new HTTPResponseError({ res })
       errorResponseHandler.notFound({
         res,
@@ -43,10 +44,10 @@ export class ParticipantController {
     const shape = req.body as EventSchema
     const responseHandler = new HTTPResponse({ res })
     const existParticipant = await ParticipantsModel.findOne({
-      query: { ...shape }
+      filters: { ...shape }
     })
 
-    if (existParticipant !== null) {
+    if (!isEmpty(existParticipant)) {
       const errorResponseHandler = new HTTPResponseError({ res })
       errorResponseHandler.badRequest({
         res,

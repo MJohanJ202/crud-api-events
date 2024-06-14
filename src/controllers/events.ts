@@ -1,21 +1,23 @@
 import { HTTPResponse } from '@/helpers/HTTP/ResponseClient.js'
 import { HTTPResponseError } from '@/helpers/HTTP/ResponseClientError.js'
+import { isEmptyObject } from '@/helpers/general/objectUtils.js'
+import { isEmpty } from '@/helpers/general/validateTypes.js'
 import { EventsModel } from '@/models/schemas/events.js'
 import type { EventSchema } from '@/schemas/event.js'
 import type { Request, Response } from 'express'
 export class EventController {
-  static getAll = async (_req: Request, res: Response) => {
-    // const { query } = req
+  static getAll = async (req: Request, res: Response) => {
+    const { query } = req
     const responseHandler = new HTTPResponse({ res })
 
-    // if (isEmptyObject(query)) {
-    const events = await EventsModel.findAll({})
-    responseHandler.ok({ res, data: events })
-    return null
-    // }
+    if (isEmptyObject(query)) {
+      const events = await EventsModel.findAll({})
+      responseHandler.ok({ res, data: events })
+      return null
+    }
 
-    // const findEventsByParams = await EventsModel.findAll({ query })
-    // responseHandler.ok({ res, data: findEventsByParams })
+    const findEventsByParams = await EventsModel.findAll({ filters: query })
+    responseHandler.ok({ res, data: findEventsByParams })
   }
 
   static getOneById = async (req: Request, res: Response) => {
@@ -23,7 +25,7 @@ export class EventController {
     const { id } = params
     const findEvent = await EventsModel.findOneById({ id })
 
-    if (findEvent === null) {
+    if (isEmpty(findEvent)) {
       const errorResponseHandler = new HTTPResponseError({ res })
       errorResponseHandler.notFound({
         res,

@@ -4,16 +4,16 @@ const searchParamSchema = z.object({
   id: z.string().uuid()
 })
 
-export const mergeWithSearchSchema = <T extends ZodRawShape>(
+export const extendWithSearchCriteria = <T extends ZodRawShape>(
   providedSchema: z.ZodObject<T>
 ) => {
-  const searchSchema = z.object({
+  const searchCriteriaSchema = z.object({
     limit: z.number().int().min(1).optional().default(10),
     orderBy: z.enum(['desc', 'asc']).optional().default('desc'),
     offset: z.number().int().min(0).optional().default(0)
   })
 
-  return searchSchema.merge(providedSchema)
+  return searchCriteriaSchema.merge(providedSchema)
 }
 
 export const validateSearchParams = (shape: unknown) => {

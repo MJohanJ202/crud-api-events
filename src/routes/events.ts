@@ -5,29 +5,29 @@ import {
   searchQueryParamsValidator
 } from '@/middlewares/validateSearchParams.js'
 import { bodyInfoValidator } from '@/middlewares/validatorBodyInfo.js'
-import { validateEventInfo, validatePartialEventInfo, validateSearchEventByParams } from '@/schemas/event.js'
+import { validateEventInfo, validateFilterEvents, validatePartialEventInfo } from '@/schemas/event.js'
 import { validateSearchParams } from '@/schemas/general.js'
 import { Router } from 'express'
 
 const router = Router()
-const handleValidationBody = bodyInfoValidator({
+const validateSaveEventInfo = bodyInfoValidator({
   validator: validateEventInfo
 })
 
-const validationPartialOwner = bodyInfoValidator({
+const validateUpdateEventInfo = bodyInfoValidator({
   validator: validatePartialEventInfo
 })
 
 const validateParams = searchParamsValidator({
   validator: validateSearchParams
 })
-const validateQueryParams = searchQueryParamsValidator({
-  validator: validateSearchEventByParams
+const validateFilters = searchQueryParamsValidator({
+  validator: validateFilterEvents
 })
 
 router.get(
   '/',
-  validateQueryParams,
+  validateFilters,
   wrapAsyncController(EventController.getAll)
 )
 
@@ -39,14 +39,14 @@ router.get(
 
 router.post(
   '/',
-  handleValidationBody,
+  validateSaveEventInfo,
   wrapAsyncController(EventController.createOne)
 )
 
 router.patch(
   '/:id',
   validateParams,
-  validationPartialOwner,
+  validateUpdateEventInfo,
   wrapAsyncController(EventController.updateOneById)
 )
 

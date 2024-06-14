@@ -1,10 +1,11 @@
 import { HTTPClientError } from '@/helpers/HTTP/ClientError.js'
 import { isEmptyObject } from '@/helpers/general/objectUtils.js'
+import { isEmpty, isEmptyArray } from '@/helpers/general/validateTypes.js'
 import type {
   EventSchema,
-  PartialEventSchema,
-  SearchEventByParams,
-  SearchOneEventByParams
+  FilterEventsSchema,
+  FilterOneEventSchema,
+  PartialEventSchema
 } from '@/schemas/event.js'
 import { connectClient } from '../utils/clientDB.js'
 
@@ -28,46 +29,51 @@ export class EventsModel {
     return event
   }
 
-  static async findOne ({ query }: { query: SearchOneEventByParams }) {
+  static async findOne ({ filters }: { filters: FilterOneEventSchema }) {
     const client = await this.database
-    const { name, date } = query
-    const findByCompositeIndex = typeof name !== 'undefined' &&
-      typeof date !== 'undefined'
+    const { name, date } = filters
+    const findByCompositeIndex = !isEmpty(name) && !isEmpty(date)
     if (findByCompositeIndex) {
       const event = await client.event
-        .findUnique({ where: { name_date: { name, date } } })
+        .findUnique({ where: { name_date: { name: name!, date: date! } } })
       return event
     }
 
     const event = await client.event
-      .findFirst({ where: { ...query } })
+      .findFirst({ where: { ...filters } })
     return event
   }
 
-  static async findAll ({ query }: { query?: SearchEventByParams }) {
+  static async findAll ({ filters }: { filters?: FilterEventsSchema }) {
     const client = await this.database
 
-    if (!isEmptyObject(query) || typeof query === 'undefined') {
+    if (isEmptyObject(filters) || isEmpty(filters)) {
       const events = await client.event.findMany()
       return events
     }
 
-    const { limit, orderBy, ...searchParams } = query
     const events = await client.event.findMany({
-      where: { ...searchParams },
-      orderBy: { name: orderBy },
-      take: limit
+      where: filters,
+      take: 10,
+      orderBy: { name: 'asc' }
     })
-
     return events
+    // const { limit, orderBy, ...searchParams } = query
+    // const events = await client.event.findMany({
+    //   where:filters,
+    //   orderBy: { name: orderBy },
+    //   take: limit
+    // })
+
+    // return events
   }
 
   static async createOne ({ shape }: { shape: unknown }) {
     const client = await this.database
     const { name, date, location, description } = shape as EventSchema
-    const existEvent = await EventsModel.findOne({ query: { name, date } })
+    const existEvent = await EventsModel.findOne({ filters: { name, date } })
 
-    if (existEvent !== null) {
+    if (!isEmpty(existEvent)) {
       throw HTTPClientError.badRequest({
         message: 'event already recorded',
         path: '/events',
@@ -115,13 +121,13 @@ export class EventsModel {
     return event
   }
 
-  static async exist (searchBy: Partial<SearchEventByParams> & { id?: string }) {
+  static async exist (searchBy: Omit<FilterOneEventSchema, 'date'>) {
     const client = await this.database
     const searchByKeys = Object.keys(searchBy)
-    if (searchByKeys.length === 0) return false
+    if (isEmptyArray(searchByKeys)) return false
 
     const conditions = searchByKeys.map((key) => {
-      return { [key]: searchBy[key as keyof SearchEventByParams] }
+      return { [key]: searchBy[key as keyof FilterEventsSchema] }
     })
 
     const results = await client.event.findFirst({ where: { OR: conditions } })

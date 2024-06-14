@@ -1,12 +1,13 @@
 import { HTTPClientError } from '@/helpers/HTTP/ClientError.js'
 import { isEmptyObject } from '@/helpers/general/objectUtils.js'
+import { isEmpty } from '@/helpers/general/validateTypes.js'
 import { EventsModel } from '@/models/schemas/events.js'
 import { connectClient } from '@/models/utils/clientDB.js'
 import type {
+  FilterParticipantSchema,
+  FiltersByOneParticipantSchema,
   PartialParticipantSchema,
-  ParticipantSchema,
-  SearchOneParticipantByParams,
-  SearchParticipantByParams
+  ParticipantSchema
 } from '@/schemas/participant.js'
 
 interface ParticipantSelectFields {
@@ -49,9 +50,9 @@ export class ParticipantsModel {
     return results
   }
 
-  static async findOne ({ query }: { query: SearchOneParticipantByParams }) {
+  static async findOne ({ filters }: { filters: FiltersByOneParticipantSchema }) {
     const client = await this.database
-    if (isEmptyObject(query) || typeof query === 'undefined') {
+    if (isEmptyObject(filters) || isEmpty(filters)) {
       throw HTTPClientError.notFound({
         message: 'search parameters by participant are empty',
         path: '/participants',
@@ -61,23 +62,23 @@ export class ParticipantsModel {
     }
 
     const participant = await client.participant.findFirst({
-      where: { ...query },
+      where: { ...filters },
       select: this.defaultSelect
     })
 
     return participant
   }
 
-  static async findAll ({ query }: { query?: SearchParticipantByParams }) {
+  static async findAll ({ filters }: { filters?: FilterParticipantSchema }) {
     const client = await this.database
 
-    if (!isEmptyObject(query) || typeof query === 'undefined') {
+    if (!isEmptyObject(filters) || isEmpty(filters)) {
       const participants = await client.participant
         .findMany({ select: this.defaultSelect })
       return participants
     }
 
-    const { limit, orderBy, ...searchParams } = query
+    const { orderBy, limit, ...searchParams } = filters!
     const participants = await client.participant.findMany({
       where: { ...searchParams },
       orderBy: { name: orderBy },
@@ -91,7 +92,7 @@ export class ParticipantsModel {
   static async createOne ({ shape }: { shape: unknown }) {
     const client = await this.database
     const { name, email, event } = shape as ParticipantSchema
-    const participantEvent = await EventsModel.findOne({ query: event })
+    const participantEvent = await EventsModel.findOne({ filters: event })
 
     if (participantEvent === null) {
       throw HTTPClientError.notFound({
@@ -138,14 +139,14 @@ export class ParticipantsModel {
   }
 
   static async exist (
-    searchBy: Partial<SearchParticipantByParams> & { id?: string }
+    searchBy: Partial<FilterParticipantSchema> & { id?: string }
   ) {
     const client = await this.database
     const searchByKeys = Object.keys(searchBy)
-    if (searchByKeys.length === 0) return false
+    if (isEmptyObject(searchByKeys)) return false
 
     const conditions = searchByKeys.map((key) => {
-      return { [key]: searchBy[key as keyof SearchParticipantByParams] }
+      return { [key]: searchBy[key as keyof FilterParticipantSchema] }
     })
 
     const results = await client.participant.findFirst({

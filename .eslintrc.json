@@ -13,7 +13,8 @@
     "@typescript-eslint/no-misused-promises": "off",
     "@typescript-eslint/no-extraneous-class": "off",
     "@typescript-eslint/ban-ts-comment": "off",
-    "@typescript-eslint/await-thenable": "off"
+    "@typescript-eslint/await-thenable": "off",
+    "@typescript-eslint/no-non-null-assertion": "off"
     },
     "ignorePatterns": ["public"]
 }

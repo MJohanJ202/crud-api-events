@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import { eventSchema } from './event.js'
-import { mergeWithSearchSchema } from './general.js'
 
 const participantSchema = z.object({
   name: z.string().min(3).max(50),
@@ -8,13 +7,20 @@ const participantSchema = z.object({
   event: eventSchema.pick({ name: true, date: true })
 })
 
-const searchParticipantByParamsSchema = mergeWithSearchSchema(participantSchema.partial())
+const filterParticipantSchema = participantSchema.omit({ event: true })
+  .partial().extend({
+    eventId: z.string().uuid().optional()
+  })
 
 export type ParticipantSchema = z.infer<typeof participantSchema>
 export type PartialParticipantSchema = Partial<ParticipantSchema>
-export type SearchOneParticipantByParams = Omit<PartialParticipantSchema, 'event'> & { id?: string }
-
-export type SearchParticipantByParams = z.infer<typeof searchParticipantByParamsSchema>
+export type FiltersByOneParticipantSchema =
+  & Omit<PartialParticipantSchema, 'event'>
+  & { id?: string, eventId?: string }
+//
+export type FilterParticipantSchema = z.infer<
+  typeof filterParticipantSchema
+>
 
 export const validateParticipantInfo = (shape: unknown) => {
   return participantSchema.safeParse(shape)
@@ -25,5 +31,5 @@ export const validatePartialParticipantInfo = (shape: unknown) => {
 }
 
 export const validateSearchParticipantByParams = (shape: unknown) => {
-  return searchParticipantByParamsSchema.safeParse(shape)
+  return filterParticipantSchema.safeParse(shape)
 }
