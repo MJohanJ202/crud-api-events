@@ -3,8 +3,9 @@ import { isEmptyObject } from '@/helpers/general/objectUtils.js'
 import { isEmpty, isEmptyArray } from '@/helpers/general/validateTypes.js'
 import type {
   EventSchema,
-  FilterEventsSchema,
-  FilterOneEventSchema,
+  ExistEvent,
+  FilterEvent,
+  FiltersEvents,
   PartialEventSchema
 } from '@/schemas/event.js'
 import { connectClient } from '../utils/clientDB.js'
@@ -29,7 +30,7 @@ export class EventsModel {
     return event
   }
 
-  static async findOne ({ filters }: { filters: FilterOneEventSchema }) {
+  static async findOne ({ filters }: { filters: FilterEvent }) {
     const client = await this.database
     const { name, date } = filters
     const findByCompositeIndex = !isEmpty(name) && !isEmpty(date)
@@ -44,7 +45,7 @@ export class EventsModel {
     return event
   }
 
-  static async findAll ({ filters }: { filters?: FilterEventsSchema }) {
+  static async findAll ({ filters }: { filters?: FiltersEvents }) {
     const client = await this.database
 
     if (isEmptyObject(filters) || isEmpty(filters)) {
@@ -52,20 +53,21 @@ export class EventsModel {
       return events
     }
 
+    const { name, description, location, date } = filters!
+    const { orderBy, limit, offset } = filters!
+
     const events = await client.event.findMany({
-      where: filters,
-      take: 10,
-      orderBy: { name: 'asc' }
+      where: {
+        name: { contains: name },
+        description: { contains: description },
+        location: { contains: location },
+        date
+      },
+      take: limit,
+      orderBy: { createdAt: orderBy },
+      skip: offset
     })
     return events
-    // const { limit, orderBy, ...searchParams } = query
-    // const events = await client.event.findMany({
-    //   where:filters,
-    //   orderBy: { name: orderBy },
-    //   take: limit
-    // })
-
-    // return events
   }
 
   static async createOne ({ shape }: { shape: unknown }) {
@@ -121,13 +123,13 @@ export class EventsModel {
     return event
   }
 
-  static async exist (searchBy: Omit<FilterOneEventSchema, 'date'>) {
+  static async exist (searchBy: ExistEvent) {
     const client = await this.database
     const searchByKeys = Object.keys(searchBy)
     if (isEmptyArray(searchByKeys)) return false
 
     const conditions = searchByKeys.map((key) => {
-      return { [key]: searchBy[key as keyof FilterEventsSchema] }
+      return { [key]: searchBy[key as keyof ExistEvent] }
     })
 
     const results = await client.event.findFirst({ where: { OR: conditions } })

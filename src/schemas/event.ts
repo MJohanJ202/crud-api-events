@@ -1,6 +1,7 @@
 import { isEmptyObject } from '@/helpers/general/objectUtils.js'
 import { isEmpty } from '@/helpers/general/validateTypes.js'
 import { z } from 'zod'
+import { extendWithSearchCriteria } from './general.js'
 
 const isAvailableDateTime = (date: string) => new Date(date) >= new Date()
 
@@ -22,38 +23,17 @@ export const eventSchema = z.object({
   description: z.string().max(1000).optional()
 })
 
-const filterEventsSchema = eventSchema.omit({ date: true }).partial().extend({
-  dateFrom: eventSchema.shape.date.optional(),
-  dateTo: eventSchema.shape.date.optional()
-}).refine(({ dateFrom, dateTo }) => compareDates({ dateFrom, dateTo }), {
-  message: 'dateTo must be greater than dateFrom',
-  path: ['dateTo']
-}).transform(({ dateFrom, dateTo, ...filters }) => {
-  type FiltersWithContains = {
-    [key in keyof typeof filters]: { contains: typeof filters[key] };
-  }
-
-  const filtersWithContains: Partial<FiltersWithContains> = {}
-  const filtersKeys = Object.keys(filters) as Array<keyof typeof filters>
-
-  filtersKeys.forEach((filtersKey: keyof typeof filters) => {
-    const filter = filters[filtersKey]
-    filtersWithContains[filtersKey] = { contains: filter }
-  })
-
-  return { ...filtersWithContains, dateFrom, dateTo }
-}).transform(({ dateFrom, dateTo, ...filters }) => {
-  const date: Record<string, (string | undefined)> = {}
-  if (!isEmpty(dateFrom)) date.gte = dateFrom
-  if (!isEmpty(dateTo)) date.lte = dateTo
-
-  return isEmptyObject(date) ? filters : { ...filters, date }
-})
-
 export type EventSchema = z.infer<typeof eventSchema>
-export type PartialEventSchema = Partial<EventSchema>
-export type FilterEventsSchema = z.infer<typeof filterEventsSchema>
-export type FilterOneEventSchema = PartialEventSchema & { id?: string }
+
+const filterEventsSchema = extendWithSearchCriteria(eventSchema.omit({ date: true }).partial())
+  .extend({
+    dateFrom: eventSchema.shape.date.optional(),
+    dateTo: eventSchema.shape.date.optional()
+  }).refine(({ dateFrom, dateTo }) => compareDates({ dateFrom, dateTo }), {
+    message: 'dateTo must be greater than dateFrom',
+    path: ['dateTo']
+  })
+type FilterEventsSchema = z.infer<typeof filterEventsSchema>
 
 export const validateEventInfo = (shape: unknown) => {
   return eventSchema.safeParse(shape)
@@ -63,6 +43,32 @@ export const validatePartialEventInfo = (shape: unknown) => {
   return eventSchema.partial().safeParse(shape)
 }
 
-export const validateFilterEvents = (shape: unknown) => {
-  return filterEventsSchema.safeParse(shape)
+const transformFilters = (data: FilterEventsSchema) => {
+  interface DateFilter { gte?: string, lte?: string }
+  const { dateFrom, dateTo, ...filters } = data
+  const date: DateFilter = {}
+
+  if (!isEmpty(dateFrom)) date.gte = dateFrom
+  if (!isEmpty(dateTo)) date.lte = dateTo
+
+  return { ...filters, date: isEmptyObject(date) ? undefined : date }
 }
+export type FiltersEvents = Partial<ReturnType<typeof transformFilters>>
+
+export const validateFilterEvents = (shape: unknown) => {
+  const result = filterEventsSchema.safeParse(shape)
+
+  if (!result.success) return result
+
+  const transformed = transformFilters(result.data)
+
+  return {
+    success: true,
+    data: transformed,
+    error: null
+  }
+}
+
+export type PartialEventSchema = Partial<EventSchema>
+export type FilterEvent = PartialEventSchema & { id?: string }
+export type ExistEvent = Omit<FilterEvent, 'date'>

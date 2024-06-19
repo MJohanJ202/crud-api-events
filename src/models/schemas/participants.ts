@@ -4,8 +4,8 @@ import { isEmpty } from '@/helpers/general/validateTypes.js'
 import { EventsModel } from '@/models/schemas/events.js'
 import { connectClient } from '@/models/utils/clientDB.js'
 import type {
-  FilterParticipantSchema,
-  FiltersByOneParticipantSchema,
+  FilterParticipant,
+  FiltersParticipants,
   PartialParticipantSchema,
   ParticipantSchema
 } from '@/schemas/participant.js'
@@ -50,7 +50,7 @@ export class ParticipantsModel {
     return results
   }
 
-  static async findOne ({ filters }: { filters: FiltersByOneParticipantSchema }) {
+  static async findOne ({ filters }: { filters: FilterParticipant }) {
     const client = await this.database
     if (isEmptyObject(filters) || isEmpty(filters)) {
       throw HTTPClientError.notFound({
@@ -69,20 +69,26 @@ export class ParticipantsModel {
     return participant
   }
 
-  static async findAll ({ filters }: { filters?: FilterParticipantSchema }) {
+  static async findAll ({ filters }: { filters?: FiltersParticipants }) {
     const client = await this.database
 
-    if (!isEmptyObject(filters) || isEmpty(filters)) {
+    if (isEmptyObject(filters) || isEmpty(filters)) {
       const participants = await client.participant
         .findMany({ select: this.defaultSelect })
       return participants
     }
 
-    const { orderBy, limit, ...searchParams } = filters!
+    const { orderBy, limit, offset } = filters!
+    const { name, email, eventId } = filters!
     const participants = await client.participant.findMany({
-      where: { ...searchParams },
-      orderBy: { name: orderBy },
+      where: {
+        name: { contains: name },
+        email: { contains: email },
+        eventId
+      },
+      orderBy: { createdAt: orderBy },
       take: limit,
+      skip: offset,
       select: this.defaultSelect
     })
 
@@ -139,14 +145,14 @@ export class ParticipantsModel {
   }
 
   static async exist (
-    searchBy: Partial<FilterParticipantSchema> & { id?: string }
+    searchBy: Partial<FiltersParticipants> & { id?: string }
   ) {
     const client = await this.database
     const searchByKeys = Object.keys(searchBy)
     if (isEmptyObject(searchByKeys)) return false
 
     const conditions = searchByKeys.map((key) => {
-      return { [key]: searchBy[key as keyof FilterParticipantSchema] }
+      return { [key]: searchBy[key as keyof FiltersParticipants] }
     })
 
     const results = await client.participant.findFirst({

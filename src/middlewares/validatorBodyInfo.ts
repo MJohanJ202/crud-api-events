@@ -1,6 +1,5 @@
 import { HTTPClientError } from '@/helpers/HTTP/ClientError.js'
 import {
-  // responseError,
   wrapAsyncController
 } from '@/helpers/wrapperAsyncController.js'
 import type { NextFunction, Request, Response } from 'express'

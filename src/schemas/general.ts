@@ -4,13 +4,18 @@ const searchParamSchema = z.object({
   id: z.string().uuid()
 })
 
+const convertToNumber = (value: unknown) => {
+  const number = Number(value)
+  return isNaN(number) ? value : number
+}
+
 export const extendWithSearchCriteria = <T extends ZodRawShape>(
   providedSchema: z.ZodObject<T>
 ) => {
   const searchCriteriaSchema = z.object({
-    limit: z.number().int().min(1).optional().default(10),
-    orderBy: z.enum(['desc', 'asc']).optional().default('desc'),
-    offset: z.number().int().min(0).optional().default(0)
+    limit: z.preprocess(convertToNumber, z.number().int().min(1).max(20).default(10).optional()),
+    orderBy: z.enum(['desc', 'asc']).default('desc').optional(),
+    offset: z.preprocess(convertToNumber, z.number().int().min(0).default(0).optional())
   })
 
   return searchCriteriaSchema.merge(providedSchema)
